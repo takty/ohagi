@@ -107,7 +107,7 @@ class Record {
 	// -------------------------------------------------------------------------
 
 
-	private function getLarge(string $keyPath): ?string {
+	public function getLarge(string $keyPath): ?string {
 		if (!isset($this->__large[$keyPath])) {
 			$ret = $this->__tbl->loadLargeField($this, $keyPath);
 			if (!$ret) return null;
@@ -117,7 +117,7 @@ class Record {
 		return $ent['value'];
 	}
 
-	private function setLarge(string $keyPath, string $value, string $suffix = ''): void {
+	public function setLarge(string $keyPath, string $value, string $suffix = ''): void {
 		$ent = [
 			'value'   => $value,
 			'suffix'  => $suffix,

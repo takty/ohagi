@@ -52,10 +52,6 @@ class Table {
 		if ($ret === false) throw new \Exception('Cannot read "config.json".');
 	}
 
-	// private function makeDefaultConf() {
-	// 	return ['key_separator' => '@'];
-	// }
-
 
 	// -------------------------------------------------------------------------
 
@@ -92,11 +88,11 @@ class Table {
 
 	private function makePath($r, $keyPath, $suffix = '') {
 		$recordPath = $this->getRecordPath($r->getId());
-		$keys = explode('.', $keyPath).filter(function ($it) { return !empty(trim($it)); });
-		$sep = $this->getConfig('keySeparator');
+		$keys = array_filter(explode('.', $keyPath), function ($it) { return !empty(trim($it)); });
+		$sep = $this->getConfig('key_separator');
 		$fileName = $sep . implode($sep, $keys);
 		$path = $recordPath . DIRECTORY_SEPARATOR . $fileName;
-		return ($suffix === '') ? "$path.$suffix" : $path;
+		return ($suffix !== '') ? "$path.$suffix" : $path;
 	}
 
 	private function getRecordPath($id) {
@@ -112,6 +108,35 @@ class Table {
 			$conf['lastId'] += 1;
 		}
 		return $conf['lastId'];
+	}
+
+
+	// -------------------------------------------------------------------------
+
+
+	public function truncate() {
+		$conf = &$this->conf;
+		$conf['lastId'] = null;
+		$fs = array_diff(scandir($this->path), ['.', '..']);
+		foreach ($fs as $f) {
+			$p = $this->path . DIRECTORY_SEPARATOR . $f;
+			if (is_dir($p)) {
+				if (strpos($f, '__') !== 0) $this->removeDirectory($p);
+			}
+		}
+		return $this;
+	}
+
+	private function removeDirectory($dir) {
+		$fs = array_diff(scandir($dir), ['.', '..']);
+		foreach ($fs as $f) {
+			if (is_dir($dir . DIRECTORY_SEPARATOR . $f)) {
+				remove_directory($dir . DIRECTORY_SEPARATOR . $f);
+			} else {
+				unlink($dir . DIRECTORY_SEPARATOR . $f);
+			}
+		}
+		return rmdir($dir);
 	}
 
 
