@@ -5,11 +5,12 @@ namespace Ohagi;
  * Core
  *
  * @author Takuto Yanagida
- * @version 2019-12-09
+ * @version 2019-12-15
  *
  */
 
 
+require_once(__DIR__ . '/filesystem.php');
 require_once(__DIR__ . '/class-table.php');
 
 
@@ -31,19 +32,21 @@ class Core {
 	}
 
 	private function loadConf() {
-		$confPath = rtrim($this->path, '\\/') . DIRECTORY_SEPARATOR . self::CONFIG_NAME;
+		$confPath = join_path($this->path, self::CONFIG_NAME);
 		if (!file_exists($confPath)) {
-			$str = json_encode($this->makeDefaultConf(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
-			$ret = file_put_contents($confPath, $str, LOCK_EX);
+			$ret = file_put_json($confPath, $this->makeDefaultConf());
 			if ($ret === false) throw new \Exception('Cannot make "config.json".');
 		}
-		$ret = file_get_contents($confPath);
-		if ($ret === false) throw new \Exception('Cannot read "config.json".');
-		$this->conf = json_decode($ret, true);
+		$ret = file_get_json($confPath);
+		if ($ret === null) throw new \Exception('Cannot read "config.json".');
+		$this->conf = $ret;
 	}
 
 	private function makeDefaultConf() {
-		return ['key_separator' => '@'];
+		return [
+			'key_separator' => '@',
+			'key_root'      => '@'
+		];
 	}
 
 	public function getConfig($key = null) {
@@ -53,7 +56,7 @@ class Core {
 	}
 
 	public function getTable(string $tableName) {
-		$tablePath = rtrim($this->path, '\\/') . DIRECTORY_SEPARATOR . $tableName;
+		$tablePath = join_path($this->path, $tableName);
 		return new Table($this, $tablePath);
 	}
 

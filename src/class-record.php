@@ -5,7 +5,7 @@ namespace Ohagi;
  * Record
  *
  * @author Takuto Yanagida
- * @version 2019-12-09
+ * @version 2019-12-15
  *
  */
 
@@ -20,19 +20,18 @@ class Record {
 
 	public $__data_updated = false;
 
-	public function __construct(Table $table) {
+	public function __construct(Table $table, string $id = null) {
 		$this->__tbl = $table;
+		if ($id) {
+			$this->__id = $id;
+			$this->loadFields();
+		}
 	}
 
 	public function setId(string $id): Record {
 		$this->__id = $id;
 		return $this;
 	}
-
-	// public function setData(array $data): Record {
-	// 	$this->__data = $data;
-	// 	return $this;
-	// }
 
 	public function getTable(): Table {
 		return $this->__tbl;
@@ -42,12 +41,10 @@ class Record {
 		return $this->__id;
 	}
 
-	// public function getData(): array {
-	// 	return $this->__data;
-	// }
-
 	public function save(): void {
-		$this->__tbl->saveRecord($this);
+		$this->__tbl->onSaveRecord($this);
+		$this->saveFields();
+		$this->saveLargeFields();
 	}
 
 
@@ -109,10 +106,9 @@ class Record {
 
 	public function getLarge(string $keyPath): ?string {
 		if (!isset($this->__large[$keyPath])) {
-			$ret = $this->__tbl->loadLargeField($this, $keyPath);
+			$ret = $this->loadLargeField($keyPath);
 			if (!$ret) return null;
 		}
-		if (!isset($this->__large[$keyPath])) return null;
 		$ent = $this->__large[$keyPath];
 		return $ent['value'];
 	}
@@ -130,14 +126,62 @@ class Record {
 	// -------------------------------------------------------------------------
 
 
-	private function getDirectory(string $keyPath) : ?string {
-		$filePath = $this->__tbl->convertKeyPathToFilePath($this, $keyPath);
-		return $filePath;
+	private function getDirectory(string $keyPath): ?string {
+		$fieldPath = $this->__tbl->getFieldPath($this, $keyPath);
+		ensure_directory_existence($fieldPath);
+		return $fieldPath;
 	}
 
-	private function setDirectory(string $keyPath): ?string {
-		$filePath = $this->__tbl->createDirectory($this, $keyPath);
-		return $filePath;
+
+	// -------------------------------------------------------------------------
+
+
+	private function loadFields(): void {
+		$path = $this->__tbl->getDataPath($this);
+		$ret = file_get_contents($path);
+		if ($ret === false) throw new \Exception("Cannot read '$path'.");
+		$this->__data = json_decode($ret, true);
+		$this->__data_updated = false;
+	}
+
+	private function saveFields(bool $force = false): void {
+		if (!$force && !$this->__data_updated) return;
+		$recordPath = $this->__tbl->getRecordPath($this);
+		ensure_directory_existence($recordPath);
+		$path = $this->__tbl->getDataPath($this);
+		$str = json_encode($this->__data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+		$ret = file_put_contents($path, $str, LOCK_EX);
+		if ($ret === false) throw new \Exception("Cannot write '$path'.");
+		$this->__data_updated = false;
+	}
+
+
+	// -------------------------------------------------------------------------
+
+
+	private function loadLargeField(string $keyPath): bool {
+		$fieldPath = $this->__tbl->getFieldPath($this, $keyPath);
+		$fs = glob("$fieldPath.*");
+		if ($fs === false || empty($fs)) return false;
+		$ret = file_get_contents($fs[0]);
+		if ($ret === false) throw new \Exception("Cannot read '$path'.");
+		$this->__large[$keyPath] = $ret;
+		return true;
+	}
+
+	private function saveLargeFields(): void {
+		foreach ($this->__large as $key => &$ent) {
+			if ($ent['updated']) {
+				$this->saveLargeField($key, $ent);
+				unset($ent['updated']);
+			}
+		}
+	}
+
+	private function saveLargeField(string $keyPath, array $ent): void {
+		$path = $this->__tbl->getFieldPath($this, $keyPath, $ent['suffix']);
+		$ret = file_put_contents($path, $ent['value'], LOCK_EX);
+		if ($ret === false) throw new \Exception("Cannot write '$path'.");
 	}
 
 }
