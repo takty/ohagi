@@ -1,18 +1,15 @@
 <?php
-namespace Ohagi;
 /**
- *
  * Core
  *
  * @author Takuto Yanagida
- * @version 2019-12-15
- *
+ * @version 2023-11-29
  */
 
+namespace ohagi;
 
-require_once(__DIR__ . '/filesystem.php');
-require_once(__DIR__ . '/class-table.php');
-
+require_once __DIR__ . '/filesystem.php';
+require_once __DIR__ . '/class-table.php';
 
 class Core {
 
@@ -21,43 +18,52 @@ class Core {
 	private $path;
 	private $conf;
 
-	public function __construct(string $path) {
+	public function __construct( string $path ) {
 		$this->path = $path;
 
-		if (!file_exists($this->path)) {
-			$ret = mkdir($this->path, 0644, true);
-			if ($ret === false) throw new \Exception('Cannot make a db directory.');
+		if ( ! file_exists( $this->path ) ) {
+			$ret = mkdir( $this->path, 0644, true );
+			if ( false === $ret ) {
+				throw new \Exception( 'Cannot make a db directory.' );
+			}
 		}
-		$this->loadConf();
+		$this->load_conf();
 	}
 
-	private function loadConf() {
-		$confPath = join_path($this->path, self::CONFIG_NAME);
-		if (!file_exists($confPath)) {
-			$ret = file_put_json($confPath, $this->makeDefaultConf());
-			if ($ret === false) throw new \Exception('Cannot make "config.json".');
+	private function load_conf() {
+		$conf_path = join_path( $this->path, self::CONFIG_NAME );
+		if ( ! file_exists( $conf_path ) ) {
+			$ret = file_put_json( $conf_path, $this->make_default_conf() );
+			if ( false === $ret ) {
+				throw new \Exception( 'Cannot make "config.json".' );
+			}
 		}
-		$ret = file_get_json($confPath);
-		if ($ret === null) throw new \Exception('Cannot read "config.json".');
+		$ret = file_get_json( $conf_path );
+		if ( null === $ret ) {
+			throw new \Exception('Cannot read "config.json".');
+		}
 		$this->conf = $ret;
 	}
 
-	private function makeDefaultConf() {
-		return [
+	private function make_default_conf() {
+		return array(
 			'key_separator' => '@',
-			'key_root'      => '@'
-		];
+			'key_root'      => '@',
+		);
 	}
 
-	public function getConfig($key = null) {
-		if ($key === null) return $this->conf;
-		if (isset($this->conf[$key])) return $this->conf[$key];
+	public function get_config( $key = null ) {
+		if ( null === $key ) {
+			return $this->conf;
+		}
+		if ( isset( $this->conf[ $key ] ) ) {
+			return $this->conf[ $key ];
+		}
 		return null;
 	}
 
-	public function getTable(string $tableName) {
-		$tablePath = join_path($this->path, $tableName);
-		return new Table($this, $tablePath);
+	public function get_table( string $table_name ) {
+		$table_path = join_path( $this->path, $table_name );
+		return new Table( $this, $table_path );
 	}
-
 }
