@@ -13,7 +13,7 @@ for ( $i = 0; $i < 4; $i += 1 ) {
 	$r->set_large( 'key.sub.text_large', 'long long long text', 'txt' );
 	$r->save();
 }
-var_dump( $r->text ;
+var_dump( $r->text );
 var_dump( $r->get( 'key.sub.subsub' ) );
 var_dump( $r->get_large( 'text_large' ) );
 var_dump( $r->get_large( 'key.sub.text_large' ) );
